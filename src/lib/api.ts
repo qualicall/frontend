@@ -1,13 +1,14 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = '/api';
 const API_KEY = import.meta.env.VITE_API_KEY;
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'X-API-KEY': API_KEY,
-  },
+    'x-api-key': API_KEY,
+    'Content-Type': 'application/json',
+  }
 });
 
 api.interceptors.request.use((config) => {
@@ -58,12 +59,46 @@ export interface PasswordResetResponse {
 
 export const login = async (email: string, password: string): Promise<LoginResponse> => {
   try {
-    const response = await api.post('/token', { username: email, password });
+    const formData = new URLSearchParams();
+    formData.append('username', email);
+    formData.append('password', password);
+    formData.append('grant_type', 'password');
+    
+    console.log('=== Login Request ===');
+    console.log('URL:', `${API_URL}/token`);
+    console.log('Headers:', {
+      'x-api-key': API_KEY,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    });
+    console.log('Form Data:', Object.fromEntries(formData));
+    
+    const response = await api.post('/token', formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+    
+    console.log('=== Login Response ===');
+    console.log('Status:', response.status);
+    console.log('Data:', response.data);
+    
     return response.data;
   } catch (error) {
+    console.log('=== Login Error ===');
     if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Invalid email or password');
+      console.error('Status:', error.response?.status);
+      console.error('Status Text:', error.response?.statusText);
+      console.error('Headers:', error.response?.headers);
+      console.error('Error Data:', error.response?.data);
+      
+      if (error.response?.status === 422) {
+        const validationErrors = error.response.data?.detail || [];
+        console.error('Validation Errors:', validationErrors);
+        throw new Error('Invalid email or password format');
+      }
+      throw new Error(error.response?.data?.detail || 'Invalid email or password');
     }
+    console.error('Non-Axios Error:', error);
     throw error;
   }
 };
@@ -139,22 +174,15 @@ export const deleteQuestion = async (uid: string): Promise<void> => {
 };
 
 export const requestPasswordReset = async (email: string): Promise<PasswordResetResponse> => {
-  const response = await fetch(`${API_URL}/auth/reset-password`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-KEY': API_KEY,
-    },
-    body: JSON.stringify({ email }),
-  });
-
-  if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.message || 'Failed to send reset password email');
+  try {
+    const response = await api.post('/auth/reset-password', { email });
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to send reset password email');
+    }
+    throw error;
   }
-
-  const data: PasswordResetResponse = await response.json();
-  return data;
 };
 
 export const resetPassword = async (token: string, newPassword: string): Promise<void> => {
