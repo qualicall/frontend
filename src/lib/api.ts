@@ -139,15 +139,22 @@ export const deleteQuestion = async (uid: string): Promise<void> => {
 };
 
 export const requestPasswordReset = async (email: string): Promise<PasswordResetResponse> => {
-  try {
-    const response = await api.post('/auth/reset-password', { email });
-    return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Failed to request password reset');
-    }
-    throw error;
+  const response = await fetch(`${API_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-KEY': API_KEY,
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.message || 'Failed to send reset password email');
   }
+
+  const data: PasswordResetResponse = await response.json();
+  return data;
 };
 
 export const resetPassword = async (token: string, newPassword: string): Promise<void> => {
