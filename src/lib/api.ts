@@ -57,6 +57,30 @@ export interface PasswordResetResponse {
   resetToken?: string;
 }
 
+export interface ResetPasswordData {
+  token: string;
+  new_password: string;
+}
+
+export interface Call {
+  uid: string;
+  filename: string;
+  transcription: string;
+  user_uid: string;
+}
+
+export interface AnalysisResult {
+  results: any;
+}
+
+export interface Answer {
+  uid: string;
+  call_uid: string;
+  question_uid: string;
+  answer: boolean;
+  created_at: string;
+}
+
 export const login = async (email: string, password: string): Promise<LoginResponse> => {
   try {
     const formData = new URLSearchParams();
@@ -185,12 +209,103 @@ export const requestPasswordReset = async (email: string): Promise<PasswordReset
   }
 };
 
-export const resetPassword = async (token: string, newPassword: string): Promise<void> => {
+export const resetPassword = async (data: ResetPasswordData): Promise<void> => {
   try {
-    await api.post('/auth/reset-password/confirm', { token, newPassword });
+    await api.post('/reset-password', data);
   } catch (error) {
     if (axios.isAxiosError(error)) {
       throw new Error(error.response?.data?.message || 'Failed to reset password');
+    }
+    throw error;
+  }
+};
+
+export const getCalls = async (): Promise<Call[]> => {
+  try {
+    const response = await api.get('/calls');
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch calls');
+    }
+    throw error;
+  }
+};
+
+export const createCall = async (file: File, userUid: string): Promise<Call> => {
+  try {
+    const formData = new FormData();
+    formData.append('call_file', file);
+    formData.append('user_uid', userUid);
+
+    const response = await api.post('/calls', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to create call');
+    }
+    throw error;
+  }
+};
+
+export const updateCall = async (call: Call): Promise<Call> => {
+  try {
+    const response = await api.put(`/calls/${call.uid}`, call);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to update call');
+    }
+    throw error;
+  }
+};
+
+export const deleteCall = async (uid: string): Promise<void> => {
+  try {
+    await api.delete(`/calls/${uid}`);
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to delete call');
+    }
+    throw error;
+  }
+};
+
+export const analyzeCall = async (uid: string): Promise<AnalysisResult> => {
+  try {
+    const response = await api.post(`/calls/${uid}/analyze`);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to analyze call');
+    }
+    throw error;
+  }
+};
+
+export const getAnswers = async (): Promise<Answer[]> => {
+  try {
+    const response = await api.get('/answers');
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch answers');
+    }
+    throw error;
+  }
+};
+
+export const updateAnswer = async (uid: string, answer: boolean): Promise<Answer> => {
+  try {
+    const response = await api.put(`/answers/${uid}`, { answer });
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Failed to update answer');
     }
     throw error;
   }
