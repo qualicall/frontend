@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getQuestions, createQuestion, updateQuestion, deleteQuestion } from '../lib/api';
 import { Question } from '../lib/api';
+import { useAuthStore } from '../stores/authStore';
 
 interface EditableQuestion extends Question {
   isNew?: boolean;
 }
 
-export function QuestionEditor() {
+export function QuestionEditor(): JSX.Element {
   const [questions, setQuestions] = useState<EditableQuestion[]>([]);
   const queryClient = useQueryClient();
+  const userUid = useAuthStore((state) => state.userUid);
 
   const { data: fetchedQuestions, isLoading } = useQuery(['questions'], getQuestions);
 
@@ -35,9 +37,17 @@ export function QuestionEditor() {
   }, [fetchedQuestions]);
 
   const handleAddRow = () => {
+    if (!userUid) return;
+    
     setQuestions([
       ...questions,
-      { uid: `new-${Date.now()}`, title: '', question: '', isNew: true },
+      { 
+        uid: `new-${Date.now()}`, 
+        title: '', 
+        question: '', 
+        isNew: true,
+        user_uid: userUid 
+      },
     ]);
   };
 
@@ -48,17 +58,19 @@ export function QuestionEditor() {
   };
 
   const handleSave = async (question: EditableQuestion) => {
+    if (!userUid) return;
+
     try {
       if (question.isNew) {
         const { uid, isNew, ...newQuestion } = question;
         await createMutation.mutateAsync({
           ...newQuestion,
-          user_uid: userUid!,
+          user_uid: userUid,
         });
       } else {
         await updateMutation.mutateAsync({
           ...question,
-          user_uid: userUid!,
+          user_uid: userUid,
         });
       }
     } catch (error) {

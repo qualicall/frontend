@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getCalls, createCall, updateCall, deleteCall, analyzeCall } from '../lib/api';
+import { getCalls, createCall, deleteCall, analyzeCall } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
-import { Call } from '../lib/api';
+import type { Call } from '../lib/api';
 
 export function CallsManagement() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedCallId, setSelectedCallId] = useState<string>('');
   const [analysisResults, setAnalysisResults] = useState<any>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
   const queryClient = useQueryClient();
   const userUid = useAuthStore((state) => state.userUid);
 
-  const { data: calls, isLoading } = useQuery(['calls'], getCalls);
+  const { data: callsData, isLoading } = useQuery(
+    ['calls', page, pageSize],
+    () => getCalls(page, pageSize)
+  );
 
   const createMutation = useMutation({
     mutationFn: (file: File) => createCall(file, userUid!),
@@ -19,11 +24,6 @@ export function CallsManagement() {
       queryClient.invalidateQueries(['calls']);
       setSelectedFile(null);
     },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: updateCall,
-    onSuccess: () => queryClient.invalidateQueries(['calls']),
   });
 
   const deleteMutation = useMutation({
@@ -99,7 +99,7 @@ export function CallsManagement() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {calls?.map((call) => (
+              {callsData?.items.map((call) => (
                 <tr key={call.uid}>
                   <td className="px-6 py-4 whitespace-nowrap">{call.filename}</td>
                   <td className="px-6 py-4">{call.transcription}</td>
@@ -122,6 +122,30 @@ export function CallsManagement() {
             </tbody>
           </table>
         </div>
+
+        {callsData && (
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-sm text-gray-700">
+              Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, callsData.total)} of {callsData.total} results
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 border rounded-md disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={page >= callsData.pages}
+                className="px-3 py-1 border rounded-md disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedCallId && (

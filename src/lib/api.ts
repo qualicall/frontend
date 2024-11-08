@@ -81,6 +81,14 @@ export interface Answer {
   created_at: string;
 }
 
+export interface PaginatedCalls {
+  items: Call[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
 export const login = async (email: string, password: string): Promise<LoginResponse> => {
   try {
     const formData = new URLSearchParams();
@@ -96,7 +104,7 @@ export const login = async (email: string, password: string): Promise<LoginRespo
     });
     console.log('Form Data:', Object.fromEntries(formData));
     
-    const response = await api.post('/token', formData, {
+    const response = await api.post('/api/token', formData, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
@@ -129,7 +137,7 @@ export const login = async (email: string, password: string): Promise<LoginRespo
 
 export const register = async (data: RegisterData): Promise<void> => {
   try {
-    await api.post('/users', data);
+    await api.post('/api/users', data);
   } catch (error) {
     if (axios.isAxiosError(error)) {
       throw new Error(error.response?.data?.message || 'Registration failed');
@@ -152,7 +160,7 @@ export const getStats = async (): Promise<Stats> => {
 
 export const getQuestions = async (): Promise<Question[]> => {
   try {
-    const response = await api.get('/questions');
+    const response = await api.get('/api/questions');
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -164,7 +172,7 @@ export const getQuestions = async (): Promise<Question[]> => {
 
 export const createQuestion = async (data: Omit<Question, 'uid'>): Promise<Question> => {
   try {
-    const response = await api.post('/questions', data);
+    const response = await api.post('/api/questions', data);
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -176,7 +184,7 @@ export const createQuestion = async (data: Omit<Question, 'uid'>): Promise<Quest
 
 export const updateQuestion = async (question: Question): Promise<Question> => {
   try {
-    const response = await api.put(`/questions/${question.uid}`, question);
+    const response = await api.put(`/api/questions/${question.uid}`, question);
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -188,7 +196,7 @@ export const updateQuestion = async (question: Question): Promise<Question> => {
 
 export const deleteQuestion = async (uid: string): Promise<void> => {
   try {
-    await api.delete(`/questions/${uid}`);
+    await api.delete(`/api/questions/${uid}`);
   } catch (error) {
     if (axios.isAxiosError(error)) {
       throw new Error(error.response?.data?.message || 'Failed to delete question');
@@ -199,7 +207,7 @@ export const deleteQuestion = async (uid: string): Promise<void> => {
 
 export const requestPasswordReset = async (email: string): Promise<PasswordResetResponse> => {
   try {
-    const response = await api.post('/auth/reset-password', { email });
+    const response = await api.post('/api/auth/reset-password', { email });
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -211,7 +219,7 @@ export const requestPasswordReset = async (email: string): Promise<PasswordReset
 
 export const resetPassword = async (data: ResetPasswordData): Promise<void> => {
   try {
-    await api.post('/reset-password', data);
+    await api.post('/api/reset-password', data);
   } catch (error) {
     if (axios.isAxiosError(error)) {
       throw new Error(error.response?.data?.message || 'Failed to reset password');
@@ -220,9 +228,11 @@ export const resetPassword = async (data: ResetPasswordData): Promise<void> => {
   }
 };
 
-export const getCalls = async (): Promise<Call[]> => {
+export const getCalls = async (page: number = 1, size: number = 10): Promise<PaginatedCalls> => {
   try {
-    const response = await api.get('/calls');
+    const response = await api.get('/api/calls', {
+      params: { page, size }
+    });
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -238,7 +248,7 @@ export const createCall = async (file: File, userUid: string): Promise<Call> => 
     formData.append('call_file', file);
     formData.append('user_uid', userUid);
 
-    const response = await api.post('/calls', formData, {
+    const response = await api.post('/api/calls', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -254,7 +264,7 @@ export const createCall = async (file: File, userUid: string): Promise<Call> => 
 
 export const updateCall = async (call: Call): Promise<Call> => {
   try {
-    const response = await api.put(`/calls/${call.uid}`, call);
+    const response = await api.put(`/api/calls/${call.uid}`, call);
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -266,7 +276,7 @@ export const updateCall = async (call: Call): Promise<Call> => {
 
 export const deleteCall = async (uid: string): Promise<void> => {
   try {
-    await api.delete(`/calls/${uid}`);
+    await api.delete(`/api/calls/${uid}`);
   } catch (error) {
     if (axios.isAxiosError(error)) {
       throw new Error(error.response?.data?.message || 'Failed to delete call');
@@ -277,7 +287,7 @@ export const deleteCall = async (uid: string): Promise<void> => {
 
 export const analyzeCall = async (uid: string): Promise<AnalysisResult> => {
   try {
-    const response = await api.post(`/calls/${uid}/analyze`);
+    const response = await api.post(`/api/calls/${uid}/analyze`);
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -289,7 +299,7 @@ export const analyzeCall = async (uid: string): Promise<AnalysisResult> => {
 
 export const getAnswers = async (): Promise<Answer[]> => {
   try {
-    const response = await api.get('/answers');
+    const response = await api.get('/api/answers');
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -301,7 +311,7 @@ export const getAnswers = async (): Promise<Answer[]> => {
 
 export const updateAnswer = async (uid: string, answer: boolean): Promise<Answer> => {
   try {
-    const response = await api.put(`/answers/${uid}`, { answer });
+    const response = await api.put(`/api/answers/${uid}`, { answer });
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
